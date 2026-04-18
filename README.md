@@ -10,8 +10,9 @@ test automation, API testing, and software engineering best practices.
 ![Python](https://img.shields.io/badge/Python-3.12+-blue)
 ![Pytest](https://img.shields.io/badge/Pytest-8.3-green)
 ![LangChain](https://img.shields.io/badge/LangChain-0.3-orange)
-![Ollama](https://img.shields.io/badge/Ollama-deepseek--r1-purple)
-![CI](https://github.com/richa-sahu/qa-agent/actions/workflows/ci.yml/badge.svg)
+![Ollama](https://img.shields.io/badge/Ollama-qwen2.5--coder%3A7b-purple)
+![deepseek-r1](https://img.shields.io/badge/Ollama-deepseek--r1-blueviolet)
+[![CI](https://github.com/richa-sahu/qa-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/richa-sahu/qa-agent/actions/workflows/ci.yml)
 
 ---
 
