@@ -1,0 +1,101 @@
+"""{{ summary }}"""
+
+import requests
+
+BASE_URL = "{{ base_url }}"
+
+
+def test_{{ operation_id }}_happy_path({% if fixture_name %}{{ fixture_name }}{% endif %}):
+    """Valid request — assert real status code and response structure."""
+{% if method == "GET" %}
+    response = requests.get(f"{BASE_URL}{{ path }}")
+{% elif method == "POST" %}
+    response = requests.post(f"{BASE_URL}{{ path }}", json={{ example_payload }})
+{% elif method == "PUT" %}
+    response = requests.put(f"{BASE_URL}{{ path }}", json={{ example_payload }})
+{% elif method == "PATCH" %}
+    response = requests.patch(f"{BASE_URL}{{ path }}", json={{ example_payload }})
+{% elif method == "DELETE" %}
+    response = requests.delete(f"{BASE_URL}{{ path }}")
+{% endif %}
+    assert response.status_code == {{ valid_status }}
+{% if valid_is_json %}
+{% if valid_body_is_list %}
+    assert isinstance(response.json(), list)
+    assert len(response.json()) > 0
+    assert "{{ valid_top_keys[0] }}" in response.json()[0]
+{% else %}
+{% for key in valid_top_keys %}
+    assert "{{ key }}" in response.json()
+{% endfor %}
+{% endif %}
+{% else %}
+{% if valid_body_text %}
+    assert response.text.strip() == "{{ valid_body_text }}"
+{% else %}
+    assert len(response.text) > 0
+{% endif %}
+{% endif %}
+
+
+def test_{{ operation_id }}_invalid_input({% if fixture_name %}{{ fixture_name }}{% endif %}):
+    """Invalid request — assert error response."""
+{% if invalid_response %}
+{% if method == "GET" %}
+    response = requests.get(f"{BASE_URL}{{ invalid_path }}")
+{% elif method == "POST" or method == "PUT" or method == "PATCH" %}
+    response = requests.{{ method | lower }}(f"{BASE_URL}{{ path }}", json={{ invalid_payload }})
+{% elif method == "DELETE" %}
+    response = requests.delete(f"{BASE_URL}{{ invalid_path }}")
+{% endif %}
+    assert response.status_code == {{ invalid_status }}
+{% if invalid_is_json %}
+{% if invalid_top_keys %}
+{% for key in invalid_top_keys %}
+    assert "{{ key }}" in response.json()
+{% endfor %}
+{% endif %}
+{% else %}
+{% if invalid_body_text %}
+    assert response.text.strip() == "{{ invalid_body_text }}"
+{% else %}
+    assert len(response.text) > 0
+{% endif %}
+{% endif %}
+{% else %}
+    {# No distinct invalid response — test idempotency instead #}
+    response1 = requests.{{ method | lower }}(f"{BASE_URL}{{ path }}"{% if method != "GET" %}, json={{ example_payload }}{% endif %})
+    response2 = requests.{{ method | lower }}(f"{BASE_URL}{{ path }}"{% if method != "GET" %}, json={{ example_payload }}{% endif %})
+    assert response1.status_code == response2.status_code
+    assert response1.status_code == {{ valid_status }}
+{% endif %}
+
+
+def test_{{ operation_id }}_response_structure({% if fixture_name %}{{ fixture_name }}{% endif %}):
+    """Assert response structure matches real API response."""
+{% if method == "GET" %}
+    response = requests.get(f"{BASE_URL}{{ path }}")
+{% elif method == "POST" %}
+    response = requests.post(f"{BASE_URL}{{ path }}", json={{ example_payload }})
+{% elif method == "PUT" %}
+    response = requests.put(f"{BASE_URL}{{ path }}", json={{ example_payload }})
+{% elif method == "PATCH" %}
+    response = requests.patch(f"{BASE_URL}{{ path }}", json={{ example_payload }})
+{% elif method == "DELETE" %}
+    response = requests.delete(f"{BASE_URL}{{ path }}")
+{% endif %}
+    assert response.status_code == {{ valid_status }}
+{% if valid_is_json %}
+{% if valid_body_is_list %}
+    assert isinstance(response.json(), list)
+    assert len(response.json()) > 0
+    assert "{{ valid_top_keys[0] }}" in response.json()[0]
+{% else %}
+    assert isinstance(response.json(), dict)
+{% for key in valid_top_keys %}
+    assert "{{ key }}" in response.json()
+{% endfor %}
+{% endif %}
+{% else %}
+    assert len(response.text) > 0
+{% endif %}
