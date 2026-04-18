@@ -31,7 +31,6 @@ from agent.spec_parser import extract_endpoints, load_spec, print_summary
 from agent.api_prober import probe_all_endpoints, set_spec
 from agent.template_generator import generate_tests_from_template, save_generated_test
 from agent.test_runner import run_tests, print_failures
-from agent.self_healer import heal_all
 from agent.logger import get_cli_logger
 
 logger = get_cli_logger()
@@ -147,6 +146,7 @@ def cmd_run(test_dir: str) -> int:
 
 def cmd_heal(test_dir: str) -> None:
     """Run tests and heal any failures."""
+    from agent.self_healer import heal_all  # lazy import — LangChain only needed locally
     console.print(Panel("[bold]Running self-healer[/bold]", style="yellow"))
     heal_all(test_dir)
 
@@ -178,6 +178,7 @@ def cmd_all(
         return
 
     # Step 3 — Heal
+    from agent.self_healer import heal_all  # lazy import — LangChain only needed locally
     console.print(
         f"\n[yellow]{failed_count} failure(s) detected — starting self-healer...[/yellow]"
     )
