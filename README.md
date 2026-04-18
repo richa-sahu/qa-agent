@@ -18,17 +18,19 @@ test automation, API testing, and software engineering best practices.
 
 ## What it does
 
+```
 OpenAPI Spec (YAML/JSON)
-↓
-spec_parser.py        — parse endpoints into structured descriptors
-↓
-api_prober.py         — probe live API, capture real responses
-↓
-template_generator.py — generate Pytest tests from Jinja2 template
-↓
-test_runner.py        — run tests, capture structured failures
-↓
-self_healer.py        — auto-fix failures (deterministic + LLM)
+        ↓
+  spec_parser.py        — parse endpoints into structured descriptors
+        ↓
+  api_prober.py         — probe live API, capture real responses
+        ↓
+  template_generator.py — generate Pytest tests from Jinja2 template
+        ↓
+  test_runner.py        — run tests, capture structured failures
+        ↓
+  self_healer.py        — auto-fix failures (deterministic + LLM)
+```
 
 **Key capabilities:**
 
@@ -43,6 +45,7 @@ self_healer.py        — auto-fix failures (deterministic + LLM)
 
 ## Architecture
 
+```
 qa-agent/
 ├── agent/
 │   ├── spec_parser.py          # Parse OpenAPI spec → endpoint descriptors
@@ -62,7 +65,8 @@ qa-agent/
 ├── generated_tests/            # Auto-generated test files land here
 ├── logs/                       # Structured logs per module
 ├── cli.py                      # Single entry point
-└── .github/workflows/ci.yml   # GitHub Actions pipeline
+└── .github/workflows/ci.yml    # GitHub Actions pipeline
+```
 
 ---
 
@@ -71,19 +75,21 @@ qa-agent/
 The self-healer uses a two-layer approach — LLM is only called when deterministic
 fixes aren't enough:
 
+```
 Failing test
-↓
+      ↓
 Layer 1 — Deterministic (no LLM, instant):
-├── Wrong JSON key:     assert 'error' in json  →  assert 'reason' in json
-├── Wrong status code:  assert 200 == 403       →  assert 403 == 403
-└── JSON on plaintext:  response.json()         →  response.text
-↓ (if still failing)
+  ├── Wrong JSON key:     assert 'error' in json  →  assert 'reason' in json
+  ├── Wrong status code:  assert 200 == 403       →  assert 403 == 403
+  └── JSON on plaintext:  response.json()         →  response.text
+      ↓ (if still failing)
 Layer 2 — LLM (deepseek-r1 via Ollama):
-├── Extracts BASE_URL + method + path from test source
-├── Makes real HTTP call to get ground truth
-├── Sends only the failing function to LLM (not full file)
-├── Guards: empty output, non-function output, deleted functions
-└── Restores original on max retries
+  ├── Extracts BASE_URL + method + path from test source
+  ├── Makes real HTTP call to get ground truth
+  ├── Sends only the failing function to LLM (not full file)
+  ├── Guards: empty output, non-function output, deleted functions
+  └── Restores original on max retries
+```
 
 ---
 
@@ -200,6 +206,7 @@ python cli.py --spec specs/restful_booker.yaml --all --force
 
 ### RestfulBooker (21 tests)
 
+```
 ✓ test_healthCheck_happy_path
 ✓ test_healthCheck_invalid_input
 ✓ test_healthCheck_response_structure
@@ -221,7 +228,9 @@ python cli.py --spec specs/restful_booker.yaml --all --force
 ✓ test_deleteBooking_happy_path      ← uses created_booking fixture
 ✓ test_deleteBooking_invalid_input
 ✓ test_deleteBooking_response_structure
+
 21 passed in ~20s
+```
 
 
 ### Petstore
