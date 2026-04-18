@@ -1,0 +1,150 @@
+openapi: "3.0.0"
+info:
+  title: Restful Booker API
+  version: "1.0"
+  description: Hotel booking API used for testing
+
+servers:
+  - url: https://restful-booker.herokuapp.com
+
+paths:
+  /ping:
+    get:
+      operationId: healthCheck
+      summary: Health check
+      responses:
+        "201":
+          description: API is up
+
+  /auth:
+    post:
+      operationId: createToken
+      summary: Create auth token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, password]
+              properties:
+                username:
+                  type: string
+                  example: admin
+                password:
+                  type: string
+                  example: password123
+      responses:
+        "200":
+          description: Token created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+
+  /booking:
+    get:
+      operationId: getBookings
+      summary: Get all booking IDs
+      parameters:
+        - name: firstname
+          in: query
+          schema:
+            type: string
+        - name: lastname
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of booking IDs
+
+    post:
+      operationId: createBooking
+      summary: Create a booking
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [firstname, lastname, totalprice, depositpaid, bookingdates]
+              properties:
+                firstname:
+                  type: string
+                  example: Jim
+                lastname:
+                  type: string
+                  example: Brown
+                totalprice:
+                  type: integer
+                  example: 111
+                depositpaid:
+                  type: boolean
+                  example: true
+                bookingdates:
+                  type: object
+                  properties:
+                    checkin:
+                      type: string
+                      format: date
+                      example: "2024-01-01"
+                    checkout:
+                      type: string
+                      format: date
+                      example: "2024-01-10"
+                additionalneeds:
+                  type: string
+                  example: Breakfast
+      responses:
+        "200":
+          description: Booking created
+
+  /booking/{id}:
+    get:
+      operationId: getBooking
+      summary: Get a specific booking
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Booking details
+        "404":
+          description: Booking not found
+
+    put:
+      operationId: updateBooking
+      summary: Update a booking (requires auth)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Updated booking
+        "403":
+          description: Forbidden
+
+    delete:
+      operationId: deleteBooking
+      summary: Delete a booking (requires auth)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "201":
+          description: Booking deleted
+        "403":
+          description: Forbidden
