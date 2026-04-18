@@ -1,0 +1,161 @@
+name: QA Agent Pipeline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:    # allows manual trigger from GitHub UI
+
+jobs:
+  qa-pipeline:
+    name: Generate & Run Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    env:
+      LLM_PROVIDER: ollama        # healing skipped in CI
+      TARGET_BASE_URL: https://restful-booker.herokuapp.com
+
+    steps:
+      # ── 1. Checkout ────────────────────────────────────────────────────────
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ── 2. Setup Python ────────────────────────────────────────────────────
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      # ── 3. Install dependencies ────────────────────────────────────────────
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      # ── 4. Verify project structure ────────────────────────────────────────
+      - name: Verify project structure
+        run: |
+          echo "Checking required files..."
+          test -f specs/restful_booker.yaml && echo "✓ restful_booker.yaml"
+          test -f agent/spec_parser.py      && echo "✓ spec_parser.py"
+          test -f agent/api_prober.py       && echo "✓ api_prober.py"
+          test -f agent/template_generator.py && echo "✓ template_generator.py"
+          test -f agent/test_runner.py      && echo "✓ test_runner.py"
+          test -f agent/self_healer.py      && echo "✓ self_healer.py"
+          test -f cli.py                    && echo "✓ cli.py"
+          echo "All required files present"
+
+      # ── 5. Smoke test spec parser ──────────────────────────────────────────
+      - name: Smoke test — spec parser
+        run: |
+          python -m agent.spec_parser specs/restful_booker.yaml
+
+      # ── 6. Probe API endpoints ─────────────────────────────────────────────
+      - name: Probe RestfulBooker API
+        run: |
+          python -m agent.api_prober specs/restful_booker.yaml
+        continue-on-error: false
+
+      # ── 7. Generate tests ──────────────────────────────────────────────────
+      - name: Generate tests from spec
+        run: |
+          python cli.py \
+            --spec specs/restful_booker.yaml \
+            --generate \
+            --force
+        env:
+          LLM_PROVIDER: ollama
+
+      # ── 8. Verify generated tests exist ───────────────────────────────────
+      - name: Verify generated tests
+        run: |
+          echo "Generated test files:"
+          ls -la generated_tests/
+          count=$(ls generated_tests/test_*.py 2>/dev/null | wc -l)
+          echo "Total test files: $count"
+          if [ "$count" -eq "0" ]; then
+            echo "ERROR: No test files generated"
+            exit 1
+          fi
+
+      # ── 9. Run generated tests ─────────────────────────────────────────────
+      - name: Run generated tests
+        run: |
+          python cli.py --run
+        continue-on-error: true
+        id: run_tests
+
+      # ── 10. Run pytest directly for detailed output ────────────────────────
+      - name: Run pytest with detailed output
+        run: |
+          pytest generated_tests/ \
+            -v \
+            --tb=short \
+            --json-report \
+            --json-report-file=test-results.json \
+            -q
+        continue-on-error: true
+        id: pytest_run
+
+      # ── 11. Print test summary ─────────────────────────────────────────────
+      - name: Print test summary
+        if: always()
+        run: |
+          python -c "
+          import json
+          from pathlib import Path
+
+          report = Path('test-results.json')
+          if not report.exists():
+              print('No test report found')
+              exit(0)
+
+          data = json.loads(report.read_text())
+          summary = data.get('summary', {})
+
+          passed  = summary.get('passed', 0)
+          failed  = summary.get('failed', 0)
+          errors  = summary.get('error', 0)
+          total   = summary.get('total', 0)
+
+          print(f'')
+          print(f'━━━ Test Summary ━━━')
+          print(f'✅ Passed:  {passed}')
+          print(f'❌ Failed:  {failed}')
+          print(f'⚠️  Errors:  {errors}')
+          print(f'📊 Total:   {total}')
+          print(f'')
+
+          if failed > 0 or errors > 0:
+              print('Failed tests:')
+              for test in data.get('tests', []):
+                  if test.get('outcome') in ('failed', 'error'):
+                      print(f'  ✗ {test[\"nodeid\"]}')
+              exit(1)
+          else:
+              print('All tests passed!')
+          "
+
+      # ── 12. Upload test results ────────────────────────────────────────────
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results
+          path: |
+            test-results.json
+            generated_tests/
+            logs/
+          retention-days: 7
+
+      # ── 13. Upload logs ────────────────────────────────────────────────────
+      - name: Upload logs
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pipeline-logs
+          path: logs/
+          retention-days: 7
